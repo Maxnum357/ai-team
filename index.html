@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="AI ทีม">
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17171a" media="(prefers-color-scheme: dark)">
+<title>AI ทีม — รวม ChatGPT, Claude, Gemini</title>
+<style>
+:root{
+  --bg:#f6f5f2; --panel:#ffffff; --ink:#1c1c1f; --muted:#6b6b72; --line:#e3e1dc;
+  --accent:#3a5bd9; --accent-ink:#fff; --soft:#eef0f8; --danger:#c43d3d; --ok:#2f8f5b;
+  --openai:#10a37f; --anthropic:#c96442; --gemini:#3d7bf0;
+  --radius:14px;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-l:env(safe-area-inset-left,0px); --safe-r:env(safe-area-inset-right,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#17171a; --panel:#222226; --ink:#ececf0; --muted:#9a9aa3; --line:#34343a;
+    --accent:#7d96ff; --accent-ink:#0f1020; --soft:#2a2c38;}
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+  font:16px/1.6 -apple-system,BlinkMacSystemFont,"Sukhumvit Set","Thonburi","Noto Sans Thai",system-ui,sans-serif;
+  -webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{display:flex;flex-direction:column;height:100dvh;max-width:920px;margin:0 auto;
+  padding-left:var(--safe-l);padding-right:var(--safe-r)}
+header{display:flex;align-items:center;gap:8px;padding:calc(10px + var(--safe-t)) 14px 10px;
+  border-bottom:1px solid var(--line);background:var(--bg);position:sticky;top:0;z-index:5}
+header h1{font-size:18px;margin:0;flex:1;font-weight:700;letter-spacing:.2px}
+.tabs{display:flex;gap:4px;background:var(--soft);padding:3px;border-radius:10px}
+.tabs button{border:0;background:transparent;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:14px}
+.tabs button.on{background:var(--panel);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
+.view{display:none}.view.on{display:block}
+
+/* chat */
+.empty{color:var(--muted);text-align:center;padding:40px 10px}
+.empty b{color:var(--ink)}
+.turn{margin-bottom:22px}
+.q{background:var(--accent);color:var(--accent-ink);padding:10px 14px;border-radius:var(--radius) var(--radius) 4px var(--radius);
+  margin-left:auto;max-width:85%;width:fit-content;white-space:pre-wrap;word-wrap:break-word}
+.modetag{font-size:12px;color:var(--muted);text-align:right;margin:4px 2px 8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-top:8px}
+.card.final{border-width:1.5px}
+.cardhead{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:6px;flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.who{font-weight:700;color:var(--ink)}
+.meta{margin-left:auto;font-size:12px}
+.body{word-wrap:break-word;overflow-wrap:anywhere}
+.body p{margin:.4em 0}.body h3,.body h4,.body h5{margin:.7em 0 .3em;line-height:1.3}
+.body ul,.body ol{margin:.3em 0;padding-left:1.4em}
+.body pre{background:var(--soft);padding:10px;border-radius:8px;overflow-x:auto;font-size:13.5px;line-height:1.45}
+.body code{font-family:ui-monospace,Menlo,monospace;font-size:.9em;background:var(--soft);padding:1px 4px;border-radius:4px}
+.body pre code{background:none;padding:0}
+.err{color:var(--danger);white-space:pre-wrap}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);
+  border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+details.steps{margin-top:8px}
+details.steps>summary{cursor:pointer;color:var(--muted);font-size:14px;padding:4px 2px;list-style:none}
+details.steps>summary::before{content:"▸ ";}
+details.steps[open]>summary::before{content:"▾ ";}
+.mini{border:0;background:var(--soft);border-radius:7px;padding:3px 9px;font-size:12px;cursor:pointer}
+
+/* composer */
+.composer{border-top:1px solid var(--line);background:var(--bg);padding:10px 12px calc(10px + var(--safe-b))}
+.modes{display:flex;gap:4px;background:var(--soft);padding:3px;border-radius:10px;margin-bottom:8px}
+.modes button{flex:1;border:0;background:transparent;padding:7px 4px;border-radius:8px;font-size:13.5px;cursor:pointer;line-height:1.25}
+.modes button.on{background:var(--panel);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13.5px;margin-bottom:8px;color:var(--muted)}
+.opts label{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.opts select{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 6px;color:var(--ink)}
+.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:3px 10px;color:var(--ink)}
+.chip input{margin:0}
+.row{display:flex;gap:8px;align-items:flex-end}
+textarea#prompt{flex:1;resize:none;min-height:46px;max-height:40vh;border:1px solid var(--line);border-radius:12px;
+  padding:11px 12px;background:var(--panel);outline:none}
+textarea#prompt:focus{border-color:var(--accent)}
+.send{border:0;background:var(--accent);color:var(--accent-ink);border-radius:12px;height:46px;min-width:64px;padding:0 14px;font-weight:700;cursor:pointer}
+.send.stop{background:var(--danger);color:#fff}
+.send:disabled{opacity:.5}
+
+/* settings */
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.sec h2{font-size:16px;margin:0 0 10px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13.5px;color:var(--muted);margin-bottom:4px}
+.field input,.field textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--bg);outline:none}
+.field textarea{min-height:80px;resize:vertical}
+.btn{border:1px solid var(--line);background:var(--soft);border-radius:10px;padding:8px 12px;cursor:pointer;font-size:14px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600}
+.btn.danger{color:var(--danger)}
+.prov{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+.prov:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.provtitle{display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:8px}
+.status{font-size:13px;font-weight:400;margin-left:auto}
+.note{font-size:13.5px;color:var(--muted)}
+.usage{width:100%;border-collapse:collapse;font-size:14px}
+.usage td,.usage th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right}
+.usage td:first-child,.usage th:first-child{text-align:left}
+.help ol,.help ul{padding-left:1.3em}.help li{margin:.3em 0}
+.help a{color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:calc(120px + var(--safe-b));transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:8px 14px;border-radius:20px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+.toast.on{opacity:.92}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>AI ทีม</h1>
+    <div class="tabs" role="tablist">
+      <button data-tab="chat" class="on">แชท</button>
+      <button data-tab="settings">ตั้งค่า</button>
+      <button data-tab="help">วิธีใช้</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="view on" id="view-chat">
+      <div id="turns"></div>
+    </section>
+
+    <section class="view" id="view-settings">
+      <div class="sec">
+        <h2>API key และโมเดล</h2>
+        <p class="note">key เก็บไว้ในเครื่องนี้เท่านั้น (ในเบราว์เซอร์) และส่งตรงไปยังผู้ให้บริการแต่ละราย ไม่ผ่านเซิร์ฟเวอร์อื่น</p>
+        <div id="provSettings"></div>
+      </div>
+      <div class="sec">
+        <h2>คำสั่งพื้นฐานที่ใช้กับ AI ทุกตัว</h2>
+        <div class="field">
+          <textarea id="systemPrompt"></textarea>
+        </div>
+        <div class="field">
+          <label>จำนวนข้อความก่อนหน้าที่ส่งไปเป็นบริบท (มากขึ้น = จำได้มากขึ้นแต่แพงขึ้น)</label>
+          <input id="ctxSize" type="number" min="0" max="40" step="2" inputmode="numeric">
+        </div>
+        <button class="btn primary" id="saveGeneral">บันทึก</button>
+      </div>
+      <div class="sec">
+        <h2>การใช้งาน token (สะสมในเครื่องนี้)</h2>
+        <table class="usage" id="usageTable"></table>
+        <p style="margin-top:10px"><button class="btn" id="resetUsage">รีเซ็ตตัวนับ</button></p>
+      </div>
+      <div class="sec">
+        <h2>ข้อมูล</h2>
+        <p><button class="btn danger" id="clearChat">ล้างประวัติแชท</button>
+           <button class="btn danger" id="clearAll">ลบทุกอย่างรวม key</button></p>
+      </div>
+    </section>
+
+    <section class="view help" id="view-help">
+      <div class="sec">
+        <h2>3 โหมดการทำงาน</h2>
+        <ul>
+          <li><b>ตัวเดียว</b> — ถาม AI ตัวที่เลือก เร็วและถูกที่สุด</li>
+          <li><b>ถามทุกตัว</b> — ส่งคำถามเดียวกันให้ทุกตัวที่เลือกพร้อมกัน แล้วให้ “ผู้สรุป” รวมจุดดีของแต่ละคำตอบเป็นคำตอบเดียว เหมาะกับคำถามที่ต้องการความแม่นยำ</li>
+          <li><b>ทีมงาน</b> — ตัวที่ 1 ร่าง → ตัวที่ 2 ตรวจหาข้อผิดพลาด → ตัวที่ 3 เรียบเรียงฉบับสุดท้าย เหมาะกับงานเขียน แผนงาน หรือโค้ด</li>
+        </ul>
+        <p class="note">ทุกโหมดใช้ประวัติแชทเดียวกัน AI ทุกตัวจึงรู้ว่าคุยอะไรกันไปแล้ว กด “ดูขั้นตอน” ใต้คำตอบเพื่อดูว่าแต่ละตัวตอบอะไร</p>
+      </div>
+      <div class="sec">
+        <h2>สมัคร API key</h2>
+        <p class="note">ค่าสมาชิกแอป (ChatGPT Plus, Claude Pro, Gemini Advanced) ไม่รวม API ต้องสมัครแยกและเติมเงินตามการใช้งาน</p>
+        <ul>
+          <li>ChatGPT: <a href="https://platform.openai.com/api-keys">platform.openai.com/api-keys</a></li>
+          <li>Claude: <a href="https://console.anthropic.com/settings/keys">console.anthropic.com</a></li>
+          <li>Gemini: <a href="https://aistudio.google.com/apikey">aistudio.google.com/apikey</a></li>
+        </ul>
+        <p class="note">แนะนำให้ตั้งวงเงินสูงสุดต่อเดือนในหน้าบิลของแต่ละค่าย เพื่อกันค่าใช้จ่ายบานปลาย</p>
+      </div>
+      <div class="sec">
+        <h2>ติดตั้งบน iPhone / iPad</h2>
+        <ol>
+          <li>เปิดหน้านี้ใน Safari</li>
+          <li>กดปุ่มแชร์ (สี่เหลี่ยมมีลูกศรขึ้น)</li>
+          <li>เลือก “เพิ่มไปยังหน้าจอโฮม”</li>
+        </ol>
+        <p class="note">บน iPad ที่มีคีย์บอร์ด กด ⌘ + Enter เพื่อส่ง</p>
+      </div>
+    </section>
+  </main>
+
+  <div class="composer" id="composer">
+    <div class="modes" id="modes">
+      <button data-mode="single">ตัวเดียว</button>
+      <button data-mode="all">ถามทุกตัว</button>
+      <button data-mode="team">ทีมงาน</button>
+    </div>
+    <div class="opts" id="opts"></div>
+    <div class="row">
+      <textarea id="prompt" rows="1" placeholder="พิมพ์คำถามหรืองานที่ต้องการ…"></textarea>
+      <button class="send" id="sendBtn">ส่ง</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ---------- storage ---------- */
+const LS_KEY = "aiTeam.v1";
+const DEFAULT_SYSTEM = "คุณเป็นผู้ช่วยที่เก่งและซื่อตรง ตอบเป็นภาษาไทยเว้นแต่ผู้ใช้ใช้ภาษาอื่น ตอบให้ตรงประเด็น ชัดเจน และบอกตรง ๆ ถ้าไม่แน่ใจ";
+const state = {
+  keys: {}, models: {}, system: DEFAULT_SYSTEM, ctxSize: 10,
+  mode: "single", single: "anthropic", allSel: ["openai","anthropic","gemini"], synth: "anthropic",
+  team: { draft: "openai", review: "gemini", finish: "anthropic" },
+  history: [], turns: [], usage: {}
+};
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem(LS_KEY) || "null"); if(s) Object.assign(state, s); }catch(e){}
+}
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+/* ---------- providers ---------- */
+const TIMEOUT_MS = 180000;
+let controller = null;
+
+async function http(url, {method="POST", headers={}, body}={}){
+  const res = await fetch(url, {
+    method, headers, body: body ? JSON.stringify(body) : undefined,
+    signal: controller ? controller.signal : undefined
+  });
+  const txt = await res.text();
+  let j = null; try{ j = JSON.parse(txt); }catch(e){}
+  if(!res.ok){
+    const msg = (j && (j.error && (j.error.message || j.error.type))) || txt.slice(0,300) || res.statusText;
+    throw new Error("HTTP " + res.status + ": " + msg);
+  }
+  return j;
+}
+
+const PROVIDERS = {
+  openai: {
+    name: "ChatGPT", color: "var(--openai)", defModel: "gpt-5.6-terra",
+    keyHint: "sk-...",
+    async call(key, model, system, msgs){
+      const r = await http("https://api.openai.com/v1/chat/completions", {
+        headers: {"Authorization": "Bearer " + key, "Content-Type": "application/json"},
+        body: { model, messages: [{role:"system", content: system}, ...msgs.map(m => ({role: m.role, content: m.text}))] }
+      });
+      const c = r.choices && r.choices[0];
+      return { text: (c && c.message && c.message.content) || "", inTok: r.usage && r.usage.prompt_tokens, outTok: r.usage && r.usage.completion_tokens };
+    },
+    async list(key){
+      const r = await http("https://api.openai.com/v1/models", {method:"GET", headers:{"Authorization":"Bearer " + key}});
+      return (r.data||[]).map(m => m.id).filter(id => /^(gpt|o\d|chatgpt)/.test(id) && !/(audio|realtime|image|tts|transcribe|search|embedding)/.test(id)).sort().reverse();
+    }
+  },
+  anthropic: {
+    name: "Claude", color: "var(--anthropic)", defModel: "claude-sonnet-5-5",
+    keyHint: "sk-ant-...",
+    headers(key){ return {"x-api-key": key, "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true", "Content-Type": "application/json"}; },
+    async call(key, model, system, msgs){
+      const r = await http("https://api.anthropic.com/v1/messages", {
+        headers: this.headers(key),
+        body: { model, max_tokens: 8000, system, messages: msgs.map(m => ({role: m.role, content: m.text})) }
+      });
+      const text = (r.content||[]).filter(b => b.type === "text").map(b => b.text).join("");
+      return { text, inTok: r.usage && r.usage.input_tokens, outTok: r.usage && r.usage.output_tokens };
+    },
+    async list(key){
+      const r = await http("https://api.anthropic.com/v1/models?limit=100", {method:"GET", headers: this.headers(key)});
+      return (r.data||[]).map(m => m.id);
+    }
+  },
+  gemini: {
+    name: "Gemini", color: "var(--gemini)", defModel: "gemini-3.8-flash",
+    keyHint: "AIza...",
+    async call(key, model, system, msgs){
+      const r = await http("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
+        headers: {"x-goog-api-key": key, "Content-Type": "application/json"},
+        body: {
+          systemInstruction: { parts: [{text: system}] },
+          contents: msgs.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{text: m.text}] }))
+        }
+      });
+      const cand = r.candidates && r.candidates[0];
+      if(!cand){ throw new Error("Gemini ไม่ตอบ" + (r.promptFeedback && r.promptFeedback.blockReason ? " (" + r.promptFeedback.blockReason + ")" : "")); }
+      const text = ((cand.content && cand.content.parts) || []).filter(p => !p.thought).map(p => p.text || "").join("");
+      const u = r.usageMetadata || {};
+      return { text, inTok: u.promptTokenCount, outTok: (u.candidatesTokenCount||0) + (u.thoughtsTokenCount||0) };
+    },
+    async list(key){
+      const r = await http("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", {method:"GET", headers:{"x-goog-api-key": key}});
+      return (r.models||[]).filter(m => (m.supportedGenerationMethods||[]).includes("generateContent"))
+        .map(m => m.name.replace(/^models\//, "")).filter(n => /^gemini/.test(n)).sort().reverse();
+    }
+  }
+};
+const PIDS = Object.keys(PROVIDERS);
+const modelOf = p => (state.models[p] || PROVIDERS[p].defModel);
+const hasKey = p => !!(state.keys[p] && state.keys[p].trim());
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), 1800); }
+
+function md(src){
+  const codes = [];
+  let s = esc(src || "").replace(/```[^\n]*\n([\s\S]*?)```/g, (m, c) => { codes.push(c.replace(/\n$/, "")); return "\n\u0001" + (codes.length-1) + "\u0001\n"; });
+  const inline = t => t
+    .replace(/`([^`\n]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>")
+    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const out = []; let list = null; let para = [];
+  const flushPara = () => { if(para.length){ out.push("<p>" + para.map(inline).join("<br>") + "</p>"); para = []; } };
+  const closeList = () => { if(list){ out.push("</" + list + ">"); list = null; } };
+  for(const line of s.split("\n")){
+    let m;
+    if((m = line.match(/^\u0001(\d+)\u0001$/))){ flushPara(); closeList(); out.push("<pre><code>" + codes[+m[1]] + "</code></pre>"); }
+    else if((m = line.match(/^(#{1,6})\s+(.*)$/))){ flushPara(); closeList(); const h = Math.min(5, m[1].length + 2); out.push("<h"+h+">" + inline(m[2]) + "</h"+h+">"); }
+    else if((m = line.match(/^\s*[-*•]\s+(.*)$/))){ flushPara(); if(list !== "ul"){ closeList(); out.push("<ul>"); list = "ul"; } out.push("<li>" + inline(m[1]) + "</li>"); }
+    else if((m = line.match(/^\s*\d+[.)]\s+(.*)$/))){ flushPara(); if(list !== "ol"){ closeList(); out.push("<ol>"); list = "ol"; } out.push("<li>" + inline(m[1]) + "</li>"); }
+    else if(!line.trim()){ flushPara(); closeList(); }
+    else { closeList(); para.push(line); }
+  }
+  flushPara(); closeList();
+  return out.join("");
+}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === "view-" + b.dataset.tab));
+  $("#composer").style.display = b.dataset.tab === "chat" ? "" : "none";
+  if(b.dataset.tab === "settings") renderSettings();
+  $("#main").scrollTop = 0;
+});
+
+/* ---------- composer ---------- */
+function provSelect(id, val){
+  return '<select id="' + id + '">' + PIDS.map(p => '<option value="' + p + '"' + (p === val ? " selected" : "") + '>' + PROVIDERS[p].name + (hasKey(p) ? "" : " (ไม่มี key)") + '</option>').join("") + "</select>";
+}
+function renderOpts(){
+  document.querySelectorAll("#modes button").forEach(b => b.classList.toggle("on", b.dataset.mode === state.mode));
+  const o = $("#opts");
+  if(state.mode === "single"){
+    o.innerHTML = '<label>ถาม ' + provSelect("o-single", state.single) + '</label>';
+    $("#o-single").onchange = e => { state.single = e.target.value; save(); };
+  } else if(state.mode === "all"){
+    o.innerHTML = PIDS.map(p => '<label class="chip"><input type="checkbox" data-p="' + p + '"' + (state.allSel.includes(p) ? " checked" : "") + '><span class="dot" style="background:' + PROVIDERS[p].color + '"></span>' + PROVIDERS[p].name + '</label>').join("")
+      + '<label>ผู้สรุป ' + provSelect("o-synth", state.synth) + '</label>';
+    o.querySelectorAll("input[type=checkbox]").forEach(c => c.onchange = () => {
+      state.allSel = [...o.querySelectorAll("input:checked")].map(x => x.dataset.p); save();
+    });
+    $("#o-synth").onchange = e => { state.synth = e.target.value; save(); };
+  } else {
+    o.innerHTML = '<label>1 ร่าง ' + provSelect("o-draft", state.team.draft) + '</label>'
+      + '<label>2 ตรวจ ' + provSelect("o-review", state.team.review) + '</label>'
+      + '<label>3 เรียบเรียง ' + provSelect("o-finish", state.team.finish) + '</label>';
+    ["draft","review","finish"].forEach(k => $("#o-" + k).onchange = e => { state.team[k] = e.target.value; save(); });
+  }
+}
+document.querySelectorAll("#modes button").forEach(b => b.onclick = () => { state.mode = b.dataset.mode; save(); renderOpts(); });
+
+const ta = $("#prompt");
+function grow(){ ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, window.innerHeight * 0.4) + "px"; }
+ta.addEventListener("input", grow);
+ta.addEventListener("keydown", e => { if(e.key === "Enter" && (e.metaKey || e.ctrlKey)){ e.preventDefault(); onSend(); } });
+$("#sendBtn").onclick = onSend;
+
+/* ---------- chat rendering ---------- */
+const MODE_LABEL = { single: "ตัวเดียว", all: "ถามทุกตัว", team: "ทีมงาน" };
+function stepHTML(s, isFinal){
+  const P = PROVIDERS[s.p];
+  const meta = s.status === "done"
+    ? ((s.inTok != null ? (s.inTok + "→" + s.outTok + " tok · ") : "") + (s.ms/1000).toFixed(1) + " วิ")
+    : "";
+  let body;
+  if(s.status === "running") body = '<span class="spin"></span> <span class="note">กำลังคิด…</span>';
+  else if(s.status === "error") body = '<div class="err">' + esc(s.error) + '</div>';
+  else body = '<div class="body">' + md(s.text) + '</div>';
+  return '<div class="card' + (isFinal ? " final" : "") + '" style="' + (isFinal ? "border-color:" + P.color : "") + '">'
+    + '<div class="cardhead"><span class="dot" style="background:' + P.color + '"></span><span class="who">' + P.name + '</span><span>' + esc(s.role) + '</span>'
+    + '<span class="meta">' + meta + '</span>'
+    + (s.status === "done" ? '<button class="mini" data-copy="' + s.id + '">คัดลอก</button>' : "")
+    + '</div>' + body + '</div>';
+}
+function turnHTML(t){
+  let h = '<div class="turn" id="t-' + t.id + '"><div class="q">' + esc(t.prompt) + '</div><div class="modetag">' + MODE_LABEL[t.mode] + '</div>';
+  const final = t.steps.find(s => s.final);
+  const others = t.steps.filter(s => !s.final);
+  if(t.mode === "single"){
+    h += t.steps.map(s => stepHTML(s, true)).join("");
+  } else {
+    if(others.length){
+      h += '<details class="steps"' + (!final ? " open" : "") + '><summary>ดูขั้นตอน (' + others.length + ')</summary>' + others.map(s => stepHTML(s, false)).join("") + '</details>';
+    }
+    if(final) h += stepHTML(final, true);
+  }
+  if(t.note) h += '<div class="note" style="margin-top:6px">' + esc(t.note) + '</div>';
+  return h + "</div>";
+}
+function renderTurns(){
+  const box = $("#turns");
+  if(!state.turns.length){
+    box.innerHTML = '<div class="empty"><b>รวม ChatGPT, Claude และ Gemini ไว้ในที่เดียว</b><br>ใส่ API key ในแท็บ “ตั้งค่า” แล้วเลือกโหมดด้านล่างเพื่อเริ่มใช้งาน</div>';
+    return;
+  }
+  box.innerHTML = state.turns.map(turnHTML).join("");
+}
+function renderTurn(t){
+  const el = document.getElementById("t-" + t.id);
+  if(!el){ renderTurns(); } else {
+    el.outerHTML = turnHTML(t);
+  }
+}
+function scrollBottom(){ const m = $("#main"); m.scrollTop = m.scrollHeight; }
+$("#turns").addEventListener("click", async e => {
+  const b = e.target.closest("[data-copy]"); if(!b) return;
+  const id = b.dataset.copy;
+  for(const t of state.turns) for(const s of t.steps) if(s.id === id){
+    try{ await navigator.clipboard.writeText(s.text); toast("คัดลอกแล้ว"); }catch(err){ toast("คัดลอกไม่ได้"); }
+  }
+});
+
+/* ---------- running ---------- */
+const uid = () => Math.random().toString(36).slice(2, 10);
+function context(){
+  const n = Math.max(0, +state.ctxSize || 0);
+  let h = n ? state.history.slice(-n) : [];
+  while(h.length && h[0].role !== "user") h = h.slice(1);
+  return h;
+}
+async function runStep(t, p, role, msgs, final){
+  const s = { id: uid(), p, role, status: "running", final: !!final };
+  t.steps.push(s); renderTurn(t); scrollBottom();
+  if(!hasKey(p)){ s.status = "error"; s.error = "ยังไม่ได้ใส่ API key ของ " + PROVIDERS[p].name + " (ไปที่แท็บตั้งค่า)"; renderTurn(t); return s; }
+  const t0 = performance.now();
+  try{
+    const r = await PROVIDERS[p].call(state.keys[p].trim(), modelOf(p), state.system || DEFAULT_SYSTEM, msgs);
+    Object.assign(s, r, { status: "done", ms: performance.now() - t0 });
+    if(!s.text.trim()){ s.status = "error"; s.error = "ได้คำตอบว่างเปล่า"; }
+    const u = state.usage[p] || (state.usage[p] = { calls: 0, inTok: 0, outTok: 0 });
+    u.calls++; u.inTok += r.inTok || 0; u.outTok += r.outTok || 0;
+  }catch(err){
+    s.status = "error";
+    s.error = err.name === "AbortError" ? "ยกเลิกแล้ว" : (err.name === "DataCloneError" || /cloned/i.test(err.message))
+      ? "แอปนี้เปิดอยู่ในหน้าดูตัวอย่างของแอป Claude ซึ่งเรียก AI ภายนอกไม่ได้ ให้นำไฟล์ขึ้นเว็บ (เช่น GitHub Pages) แล้วเปิดลิงก์ใน Safari" : (err.message === "Failed to fetch" || err.message === "Load failed"
+      ? "เชื่อมต่อไม่ได้ (เช็กอินเทอร์เน็ต หรือเปิดไฟล์นี้จากเว็บ https ไม่ใช่จากไฟล์ในเครื่อง)" : err.message);
+  }
+  renderTurn(t); save(); return s;
+}
+
+async function onSend(){
+  if(controller){ controller.abort(); return; }
+  const prompt = ta.value.trim(); if(!prompt) return;
+  const anyKey = PIDS.some(hasKey);
+  if(!anyKey){ toast("ใส่ API key ในแท็บตั้งค่าก่อน"); return; }
+  if(state.mode === "all" && !state.allSel.length){ toast("เลือก AI อย่างน้อย 1 ตัว"); return; }
+  ta.value = ""; grow();
+  const ctx = context();
+  const msgs = [...ctx, {role: "user", text: prompt}];
+  const t = { id: uid(), prompt, mode: state.mode, steps: [] };
+  state.turns.push(t); renderTurns(); scrollBottom();
+  controller = new AbortController();
+  const timer = setTimeout(() => controller && controller.abort(), TIMEOUT_MS);
+  const btn = $("#sendBtn"); btn.textContent = "หยุด"; btn.classList.add("stop");
+  let finalText = null;
+  try{
+    if(state.mode === "single"){
+      const s = await runStep(t, state.single, "ตอบ", msgs, true);
+      if(s.status === "done") finalText = s.text;
+    } else if(state.mode === "all"){
+      const sel = state.allSel.filter(p => PIDS.includes(p));
+      const results = [];
+      await Promise.all(sel.map(async p => { results.push(await runStep(t, p, "ตอบ", msgs, false)); }));
+      const ok = sel.map(p => results.find(r => r.p === p)).filter(r => r && r.status === "done");
+      if(ok.length >= 2){
+        const joined = ok.map((r, i) => "### คำตอบที่ " + (i+1) + " (" + PROVIDERS[r.p].name + ")\n" + r.text).join("\n\n");
+        const s = await runStep(t, state.synth, "สรุปรวม", [...ctx, {role:"user", text:
+          "คำถามของผู้ใช้:\n" + prompt + "\n\nมีผู้ช่วยหลายคนตอบคำถามนี้ไว้ดังนี้:\n\n" + joined +
+          "\n\nงานของคุณ: เปรียบเทียบคำตอบเหล่านี้ เลือกส่วนที่ถูกต้องและมีประโยชน์ที่สุด แก้ส่วนที่ผิดหรือขัดแย้งกัน แล้วเขียนคำตอบสุดท้ายฉบับเดียวที่ดีที่สุดถึงผู้ใช้โดยตรง ถ้าคำตอบขัดกันในประเด็นสำคัญให้บอกผู้ใช้สั้น ๆ"}], true);
+        if(s.status === "done") finalText = s.text;
+      } else if(ok.length === 1){
+        ok[0].final = true; finalText = ok[0].text;
+        if(sel.length > 1) t.note = "มีเพียงตัวเดียวที่ตอบสำเร็จ จึงไม่ได้สรุปรวม";
+      }
+    } else {
+      const tm = state.team;
+      const d = await runStep(t, tm.draft, "1 ร่าง", msgs, false);
+      if(d.status === "done"){
+        const r = await runStep(t, tm.review, "2 ตรวจ", [...ctx, {role:"user", text:
+          "คำถามของผู้ใช้:\n" + prompt + "\n\nร่างคำตอบ:\n" + d.text +
+          "\n\nคุณเป็นผู้ตรวจงานที่เข้มงวด ตรวจร่างนี้แล้วชี้ข้อผิดพลาด ข้อมูลที่ขาดหรือไม่ชัดเจน และสิ่งที่ควรปรับ เป็นข้อสั้น ๆ เรียงจากสำคัญมากไปน้อย ไม่ต้องเขียนคำตอบใหม่ ถ้าร่างดีอยู่แล้วให้บอกว่าดีแล้ว"}], false);
+        const review = r.status === "done" ? r.text : "(ไม่มีคำวิจารณ์)";
+        const f = await runStep(t, tm.finish, "3 เรียบเรียง", [...ctx, {role:"user", text:
+          "คำถามของผู้ใช้:\n" + prompt + "\n\nร่างคำตอบ:\n" + d.text + "\n\nคำวิจารณ์จากผู้ตรวจ:\n" + review +
+          "\n\nเขียนคำตอบสุดท้ายถึงผู้ใช้โดยตรง โดยแก้ตามคำวิจารณ์ที่ถูกต้อง (ถ้าคำวิจารณ์ข้อไหนผิดให้ข้ามไป) ไม่ต้องพูดถึงร่างหรือผู้ตรวจ"}], true);
+        if(f.status === "done") finalText = f.text;
+      }
+    }
+  } finally {
+    clearTimeout(timer); controller = null;
+    btn.textContent = "ส่ง"; btn.classList.remove("stop");
+  }
+  if(finalText){ state.history.push({role:"user", text: prompt}, {role:"assistant", text: finalText}); }
+  if(state.history.length > 80) state.history = state.history.slice(-80);
+  if(state.turns.length > 60) state.turns = state.turns.slice(-60);
+  save(); renderTurn(t);
+}
+
+/* ---------- settings ---------- */
+function renderSettings(){
+  $("#provSettings").innerHTML = PIDS.map(p => {
+    const P = PROVIDERS[p];
+    return '<div class="prov"><div class="provtitle"><span class="dot" style="background:' + P.color + '"></span>' + P.name
+      + '<span class="status" id="st-' + p + '">' + (hasKey(p) ? '<span style="color:var(--ok)">มี key แล้ว</span>' : '<span class="note">ยังไม่มี key</span>') + '</span></div>'
+      + '<div class="field"><label>API key</label><input type="password" autocomplete="off" autocapitalize="off" spellcheck="false" id="k-' + p + '" placeholder="' + P.keyHint + '" value="' + esc(state.keys[p] || "") + '"></div>'
+      + '<div class="field"><label>โมเดล (ค่าเริ่มต้น ' + P.defModel + ')</label><input id="m-' + p + '" list="dl-' + p + '" autocapitalize="off" spellcheck="false" value="' + esc(modelOf(p)) + '"><datalist id="dl-' + p + '"></datalist></div>'
+      + '<button class="btn primary" data-save="' + p + '">บันทึก</button> <button class="btn" data-test="' + p + '">ทดสอบ + ดึงรายชื่อโมเดล</button>'
+      + '<div class="note" id="info-' + p + '" style="margin-top:6px"></div></div>';
+  }).join("");
+  $("#systemPrompt").value = state.system;
+  $("#ctxSize").value = state.ctxSize;
+  renderUsage();
+}
+function readProv(p){
+  state.keys[p] = $("#k-" + p).value.trim();
+  const m = $("#m-" + p).value.trim();
+  if(m && m !== PROVIDERS[p].defModel) state.models[p] = m; else delete state.models[p];
+  save(); renderOpts();
+  $("#st-" + p).innerHTML = hasKey(p) ? '<span style="color:var(--ok)">มี key แล้ว</span>' : '<span class="note">ยังไม่มี key</span>';
+}
+$("#provSettings").addEventListener("click", async e => {
+  const sb = e.target.closest("[data-save]"), tb = e.target.closest("[data-test]");
+  if(sb){ readProv(sb.dataset.save); toast("บันทึกแล้ว"); }
+  if(tb){
+    const p = tb.dataset.test; readProv(p);
+    const info = $("#info-" + p);
+    if(!hasKey(p)){ info.textContent = "ใส่ key ก่อน"; return; }
+    info.innerHTML = '<span class="spin"></span> กำลังทดสอบ…';
+    try{
+      const ids = await PROVIDERS[p].list(state.keys[p]);
+      $("#dl-" + p).innerHTML = ids.map(id => '<option value="' + esc(id) + '">').join("");
+      const cur = modelOf(p);
+      info.innerHTML = '<span style="color:var(--ok)">key ใช้ได้ ✓</span> พบ ' + ids.length + ' โมเดล'
+        + (ids.length && !ids.includes(cur) ? '<br><span class="err">ไม่พบโมเดล “' + esc(cur) + '” ในบัญชีนี้ — แตะช่องโมเดลแล้วเลือกจากรายการ</span>' : "")
+        + (ids.length ? '<br>ตัวอย่าง: ' + ids.slice(0, 6).map(esc).join(", ") : "");
+    }catch(err){
+      info.innerHTML = '<span class="err">' + esc(err.message === "Failed to fetch" || err.message === "Load failed" ? "เชื่อมต่อไม่ได้" : err.message) + '</span>';
+    }
+  }
+});
+$("#saveGeneral").onclick = () => {
+  state.system = $("#systemPrompt").value.trim() || DEFAULT_SYSTEM;
+  state.ctxSize = Math.max(0, Math.min(40, parseInt($("#ctxSize").value, 10) || 0));
+  save(); toast("บันทึกแล้ว");
+};
+function renderUsage(){
+  const rows = PIDS.map(p => { const u = state.usage[p] || {calls:0,inTok:0,outTok:0};
+    return "<tr><td>" + PROVIDERS[p].name + "</td><td>" + u.calls + "</td><td>" + u.inTok.toLocaleString() + "</td><td>" + u.outTok.toLocaleString() + "</td></tr>"; });
+  $("#usageTable").innerHTML = "<tr><th>AI</th><th>ครั้ง</th><th>token เข้า</th><th>token ออก</th></tr>" + rows.join("");
+}
+// two-tap confirm (alert/confirm are unreliable inside some app views)
+function confirmTap(btn, label, fn){
+  btn.onclick = () => {
+    if(btn.dataset.armed){ fn(); btn.textContent = label; delete btn.dataset.armed; return; }
+    btn.dataset.armed = "1"; btn.textContent = "แตะอีกครั้งเพื่อยืนยัน";
+    setTimeout(() => { if(btn.dataset.armed){ delete btn.dataset.armed; btn.textContent = label; } }, 3000);
+  };
+}
+confirmTap($("#resetUsage"), "รีเซ็ตตัวนับ", () => { state.usage = {}; save(); renderUsage(); toast("รีเซ็ตแล้ว"); });
+confirmTap($("#clearChat"), "ล้างประวัติแชท", () => { state.history = []; state.turns = []; save(); renderTurns(); toast("ล้างแชทแล้ว"); });
+confirmTap($("#clearAll"), "ลบทุกอย่างรวม key", () => { try{ localStorage.removeItem(LS_KEY); }catch(e){} location.reload(); });
+
+/* ---------- init ---------- */
+load();
+// mark any step left "running" from a closed session as interrupted
+state.turns.forEach(t => t.steps.forEach(s => { if(s.status === "running"){ s.status = "error"; s.error = "ถูกขัดจังหวะ"; } }));
+renderOpts(); renderTurns(); scrollBottom();
+if(!PIDS.some(hasKey)) document.querySelector('.tabs button[data-tab="help"]').click();
+</script>
+</body>
+</html>
